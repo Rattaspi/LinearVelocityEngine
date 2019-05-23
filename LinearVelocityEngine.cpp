@@ -27,11 +27,11 @@ public:
 	vector<Info> p;
 	vector<Info> v;
 	vector<Info> a;
+	queue<int> events;
 	int slices;
 
 	E19AlexCanut() {}
 
-	//vector<Particle> particles;
 	int counter = 0;
 
 	//Add a particle to the system
@@ -59,7 +59,9 @@ public:
 
 	//Update all the particles
 	void Update(float dt) {
-
+		for (int i = 0; i < MAX_THREADS; i++) {
+			events.emplace(slices*i);
+		}
 
 		/*
 		__m128 dtV = _mm_set_ps(dt, dt, dt, dt);
@@ -94,22 +96,22 @@ public:
 std::mutex mut, mut2;
 float dt = 1.0f;
 
-void UpdateThreading(bool* running, queue<vector<Info>>* events, E19AlexCanut* info) {
+void UpdateThreading(bool* running, queue<int>* events, E19AlexCanut* info) {
 	while (*running) {
 		mut2.lock();
 		bool isEmpty = events->empty();
 		mut2.unlock();
 
-		if (events->empty()) {
+		if (!isEmpty) {
 			mut.lock();
-			vector<Info> pVector = events->front();
+			int initialPos = events->front();
 			events->pop();
 			mut.unlock();
 
 			__m128 dtV = _mm_set_ps(dt, dt, dt, dt);
-			for (int i = 0; i < pVector.size(); i++) {
-				//v[i].particlesSIMD = _mm_fmadd_ps(a[i].particlesSIMD, dtV, v[i].particlesSIMD);
-				//p[i].particlesSIMD = _mm_fmadd_ps(v[i].particlesSIMD, dtV, p[i].particlesSIMD);
+			for (int i = 0; i < info->slices; i++) {
+				info->v[initialPos + i].particlesSIMD = _mm_fmadd_ps(info->a[initialPos + i].particlesSIMD, dtV, info->v[initialPos + i].particlesSIMD);
+				info->p[initialPos + i].particlesSIMD = _mm_fmadd_ps(info->v[initialPos + i].particlesSIMD, dtV, info->p[initialPos + i].particlesSIMD);
 			}
 		}
 	}
@@ -121,14 +123,14 @@ int main() {
 	E19AlexCanut* a = new E19AlexCanut();
 	vector<thread> threadPool;
 	bool running = true;
-	queue<vector<Info>> events;
+	
 
 	for (int i = 0; i < MAX_THREADS; i++){
-		//threadPool.push_back(thread(UpdateThreading, &running, &events, &a));
+		threadPool.push_back(thread(UpdateThreading, &running, &a->events, a));
 	}
 
 	/*BODY*/
-	for (int i = 0; i < 15000000; i++) a->Add(1.0f, 20.0f, 20.0f, 21.0f, 2.0f, 2.0f);
+	for (int i = 0; i < 15000; i++) a->Add(1.0f, 20.0f, 20.0f, 21.0f, 2.0f, 2.0f);
 	a->Divide();
 	cout << a->slices << endl;
 	cout << a->slices * MAX_THREADS << endl;
