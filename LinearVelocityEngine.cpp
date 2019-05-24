@@ -130,12 +130,10 @@ int main() {
 	}
 
 	/*BODY*/
-	for (int i = 0; i < 15000; i++) a->Add(1.0f, 20.0f, 20.0f, 21.0f, 2.0f, 2.0f);
+	for (int i = 0; i < 15000000; i++) a->Add(1.0f, 20.0f, 20.0f, 21.0f, 2.0f, 2.0f);
 	a->Divide();
-	cout << a->slices << endl;
-	cout << a->slices * MAX_THREADS << endl;
 	auto start = chrono::high_resolution_clock::now();
-	for(int i = 0; i<1; i++) a->Update(1.0f);
+	for(int i = 0; i<60; i++) a->Update(1.0f);
 	running = false;
 	for (int i = 0; i < threadPool.size(); i++) {
 		threadPool[i].join();
