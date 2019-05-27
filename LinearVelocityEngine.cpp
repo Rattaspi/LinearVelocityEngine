@@ -97,21 +97,26 @@ std::mutex mut, mut2;
 float dt = 1.0f;
 
 void UpdateThreading(bool* running, queue<int>* events, E19AlexCanut* info) {
+	bool isEmpty = false;
+	
 	while (*running) {
-		mut2.lock();
-		bool isEmpty = events->empty();
-		mut2.unlock();
+		isEmpty = false;
+		while (!isEmpty) {
+			mut2.lock();
+			isEmpty = events->empty();
+			mut2.unlock();
 
-		if (!isEmpty) {
-			mut.lock();
-			int initialPos = events->front();
-			events->pop();
-			mut.unlock();
+			if (!isEmpty) {
+				mut.lock();
+				int initialPos = events->front();
+				events->pop();
+				mut.unlock();
 
-			__m128 dtV = _mm_set_ps(dt, dt, dt, dt);
-			for (int i = 0; i < info->slices; i++) {
-				info->v[initialPos + i].particlesSIMD = _mm_fmadd_ps(info->a[initialPos + i].particlesSIMD, dtV, info->v[initialPos + i].particlesSIMD);
-				info->p[initialPos + i].particlesSIMD = _mm_fmadd_ps(info->v[initialPos + i].particlesSIMD, dtV, info->p[initialPos + i].particlesSIMD);
+				__m128 dtV = _mm_set_ps(dt, dt, dt, dt);
+				for (int i = 0; i < info->slices; i++) {
+					info->v[initialPos + i].particlesSIMD = _mm_fmadd_ps(info->a[initialPos + i].particlesSIMD, dtV, info->v[initialPos + i].particlesSIMD);
+					info->p[initialPos + i].particlesSIMD = _mm_fmadd_ps(info->v[initialPos + i].particlesSIMD, dtV, info->p[initialPos + i].particlesSIMD);
+				}
 			}
 		}
 	}
